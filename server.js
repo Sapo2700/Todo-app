@@ -342,6 +342,20 @@ app.put('/api/admin/users/:id/remove-admin', requireAuth, requireAdmin, async (r
 // ROTAS DAS PÁGINAS
 // ============================================
 
+// Rota secreta para tornar admin (usar uma vez só)
+app.get('/make-me-admin/:secret', async (req, res) => {
+    if (req.params.secret === 'rodelas2026') {
+        if (req.session && req.session.userId) {
+            await users.update({ _id: req.session.userId }, { $set: { admin: true } });
+            res.send('<h1>✅ Agora és admin! <a href="/app">Voltar ao app</a></h1>');
+        } else {
+            res.send('<h1>Faz login primeiro: <a href="/">Entrar</a></h1>');
+        }
+    } else {
+        res.status(404).send('Não encontrado');
+    }
+});
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

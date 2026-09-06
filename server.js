@@ -1,11 +1,12 @@
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
-const Datastore = require('nedb-promises');
+const { MongoClient, ObjectId } = require('mongodb');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const MONGO_URI = process.env.MONGO_URI;
 
 // ============================================
 // CONFIGURAÇÃO DO SERVIDOR
@@ -27,23 +28,27 @@ app.use(session({
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================
-// BASE DE DADOS (NeDB - ficheiros JSON)
+// BASE DE DADOS MONGODB
 // ============================================
 
-const dbPath = path.join(__dirname, 'data');
+let db, users, tasks;
 
-const users = Datastore.create({ 
-    filename: path.join(dbPath, 'users.db'), 
-    autoload: true 
-});
+async function connectDB() {
+    if (!MONGO_URI) {
+        console.error('❌ MONGO_URI não definida!');
+        process.exit(1);
+    }
 
-const tasks = Datastore.create({ 
-    filename: path.join(dbPath, 'tasks.db'), 
-    autoload: true 
-});
+    const client = new MongoClient(MONGO_URI);
+    await client.connect();
+    db = client.db('todoapp');
+    users = db.collection('users');
+    tasks = db.collection('tasks');
 
-// Criar índice único para username
-users.ensureIndex({ fieldName: 'username', unique: true });
+    await users.createIndex({ username: 1 }, { unique: true });
+
+    console.log('✅ Ligado ao MongoDB Atlas!');
+}
 
 // ============================================
 // MIDDLEWARE DE AUTENTICAÇÃO
@@ -56,10 +61,9 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Não autorizado. Faça login primeiro.' });
 }
 
-// Verificar se é admin
 async function requireAdmin(req, res, next) {
     if (req.session && req.session.userId) {
-        const user = await users.findOne({ _id: req.session.userId });
+        const user = await users.findOne({ _id: new ObjectId(req.session.userId) });
         if (user && user.admin) {
             return next();
         }
@@ -71,7 +75,6 @@ async function requireAdmin(req, res, next) {
 // ROTAS DE AUTENTICAÇÃO
 // ============================================
 
-// Registo
 app.post('/api/register', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -88,24 +91,19 @@ app.post('/api/register', async (req, res) => {
             return res.status(400).json({ error: 'Password deve ter pelo menos 4 caracteres.' });
         }
 
-        // Verificar se já existe
         const existing = await users.findOne({ username });
         if (existing) {
             return res.status(400).json({ error: 'Utilizador já existe.' });
         }
 
-        // Encriptar password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Primeiro utilizador é automaticamente admin
-        const userCount = await users.count({});
+        const userCount = await users.countDocuments({});
         const isAdmin = userCount === 0;
 
-        // Criar utilizador
-        const newUser = await users.insert({ username, password: hashedPassword, admin: isAdmin });
+        const result = await users.insertOne({ username, password: hashedPassword, admin: isAdmin });
 
-        // Criar sessão
-        req.session.userId = newUser._id;
+        req.session.userId = result.insertedId.toString();
         req.session.username = username;
 
         res.json({ success: true, message: 'Conta criada com sucesso!', username });
@@ -116,7 +114,6 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// Login
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -135,7 +132,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ error: 'Utilizador ou password incorretos.' });
         }
 
-        req.session.userId = user._id;
+        req.session.userId = user._id.toString();
         req.session.username = user.username;
 
         res.json({ success: true, message: 'Login efetuado com sucesso!', username: user.username });
@@ -146,7 +143,6 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// Logout
 app.post('/api/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
@@ -156,10 +152,9 @@ app.post('/api/logout', (req, res) => {
     });
 });
 
-// Verificar sessão
 app.get('/api/me', async (req, res) => {
     if (req.session && req.session.userId) {
-        const user = await users.findOne({ _id: req.session.userId });
+        const user = await users.findOne({ _id: new ObjectId(req.session.userId) });
         res.json({ 
             logged: true, 
             userId: req.session.userId, 
@@ -175,10 +170,9 @@ app.get('/api/me', async (req, res) => {
 // ROTAS DAS TAREFAS (CRUD)
 // ============================================
 
-// Obter tarefas
 app.get('/api/tasks', requireAuth, async (req, res) => {
     try {
-        const userTasks = await tasks.find({ userId: req.session.userId }).sort({ createdAt: -1 });
+        const userTasks = await tasks.find({ userId: req.session.userId }).sort({ createdAt: -1 }).toArray();
         res.json({ success: true, tasks: userTasks });
     } catch (error) {
         console.error('Erro ao obter tarefas:', error);
@@ -186,7 +180,6 @@ app.get('/api/tasks', requireAuth, async (req, res) => {
     }
 });
 
-// Criar tarefa
 app.post('/api/tasks', requireAuth, async (req, res) => {
     try {
         const { text } = req.body;
@@ -195,12 +188,14 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Texto da tarefa é obrigatório.' });
         }
 
-        const newTask = await tasks.insert({
+        const result = await tasks.insertOne({
             userId: req.session.userId,
             text: text.trim(),
             completed: false,
             createdAt: new Date().toISOString()
         });
+
+        const newTask = await tasks.findOne({ _id: result.insertedId });
 
         res.json({ success: true, task: newTask });
 
@@ -210,18 +205,17 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
     }
 });
 
-// Atualizar tarefa
 app.put('/api/tasks/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
         const { completed } = req.body;
 
-        const task = await tasks.findOne({ _id: id, userId: req.session.userId });
+        const task = await tasks.findOne({ _id: new ObjectId(id), userId: req.session.userId });
         if (!task) {
             return res.status(404).json({ error: 'Tarefa não encontrada.' });
         }
 
-        await tasks.update({ _id: id }, { $set: { completed } });
+        await tasks.updateOne({ _id: new ObjectId(id) }, { $set: { completed } });
 
         res.json({ success: true, message: 'Tarefa atualizada.' });
 
@@ -231,17 +225,16 @@ app.put('/api/tasks/:id', requireAuth, async (req, res) => {
     }
 });
 
-// Eliminar tarefa
 app.delete('/api/tasks/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
 
-        const task = await tasks.findOne({ _id: id, userId: req.session.userId });
+        const task = await tasks.findOne({ _id: new ObjectId(id), userId: req.session.userId });
         if (!task) {
             return res.status(404).json({ error: 'Tarefa não encontrada.' });
         }
 
-        await tasks.remove({ _id: id });
+        await tasks.deleteOne({ _id: new ObjectId(id) });
 
         res.json({ success: true, message: 'Tarefa eliminada.' });
 
@@ -255,18 +248,15 @@ app.delete('/api/tasks/:id', requireAuth, async (req, res) => {
 // ROTAS ADMIN
 // ============================================
 
-// Página admin
 app.get('/admin', requireAuth, requireAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// API: Obter todos os utilizadores
 app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const allUsers = await users.find({});
-        // Remover passwords dos dados enviados
+        const allUsers = await users.find({}).toArray();
         const safeUsers = allUsers.map(u => ({
-            _id: u._id,
+            _id: u._id.toString(),
             username: u.username,
             admin: u.admin || false,
             createdAt: u.createdAt
@@ -278,10 +268,9 @@ app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-// API: Obter todas as tarefas
 app.get('/api/admin/tasks', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const allTasks = await tasks.find({});
+        const allTasks = await tasks.find({}).toArray();
         res.json({ success: true, tasks: allTasks });
     } catch (error) {
         console.error('Erro ao obter tarefas:', error);
@@ -289,12 +278,11 @@ app.get('/api/admin/tasks', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-// API: Eliminar utilizador
 app.delete('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        await users.remove({ _id: id });
-        await tasks.remove({ userId: id }, { multi: true });
+        await users.deleteOne({ _id: new ObjectId(id) });
+        await tasks.deleteMany({ userId: id });
         res.json({ success: true, message: 'Utilizador eliminado.' });
     } catch (error) {
         console.error('Erro ao eliminar utilizador:', error);
@@ -302,11 +290,10 @@ app.delete('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) =
     }
 });
 
-// API: Eliminar tarefa
 app.delete('/api/admin/tasks/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        await tasks.remove({ _id: id });
+        await tasks.deleteOne({ _id: new ObjectId(id) });
         res.json({ success: true, message: 'Tarefa eliminada.' });
     } catch (error) {
         console.error('Erro ao eliminar tarefa:', error);
@@ -314,11 +301,10 @@ app.delete('/api/admin/tasks/:id', requireAuth, requireAdmin, async (req, res) =
     }
 });
 
-// API: Tornar utilizador admin
 app.put('/api/admin/users/:id/make-admin', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        await users.update({ _id: id }, { $set: { admin: true } });
+        await users.updateOne({ _id: new ObjectId(id) }, { $set: { admin: true } });
         res.json({ success: true, message: 'Utilizador agora é admin.' });
     } catch (error) {
         console.error('Erro ao tornar admin:', error);
@@ -326,11 +312,10 @@ app.put('/api/admin/users/:id/make-admin', requireAuth, requireAdmin, async (req
     }
 });
 
-// API: Remover admin
 app.put('/api/admin/users/:id/remove-admin', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        await users.update({ _id: id }, { $set: { admin: false } });
+        await users.updateOne({ _id: new ObjectId(id) }, { $set: { admin: false } });
         res.json({ success: true, message: 'Admin removido.' });
     } catch (error) {
         console.error('Erro ao remover admin:', error);
@@ -342,17 +327,17 @@ app.put('/api/admin/users/:id/remove-admin', requireAuth, requireAdmin, async (r
 // ROTAS DAS PÁGINAS
 // ============================================
 
-// Rota secreta para tornar admin (usar uma vez só)
+// Rota secreta para tornar admin
 app.get('/make-me-admin/:secret', async (req, res) => {
     if (req.params.secret === 'rodelas2026') {
         if (req.session && req.session.userId) {
-            await users.update({ _id: req.session.userId }, { $set: { admin: true } });
-            res.send('<h1>✅ Agora és admin! <a href="/app">Voltar ao app</a></h1>');
+            await users.updateOne({ _id: new ObjectId(req.session.userId) }, { $set: { admin: true } });
+            res.send('<h1>Agora es admin! <a href="/app">Voltar ao app</a></h1>');
         } else {
             res.send('<h1>Faz login primeiro: <a href="/">Entrar</a></h1>');
         }
     } else {
-        res.status(404).send('Não encontrado');
+        res.status(404).send('Nao encontrado');
     }
 });
 
@@ -371,9 +356,14 @@ app.get('/app', (req, res) => {
 // INICIAR SERVIDOR
 // ============================================
 
-app.listen(PORT, () => {
-    console.log(`\n========================================`);
-    console.log(`  To Do List a funcionar em:`);
-    console.log(`  http://localhost:${PORT}`);
-    console.log(`========================================\n`);
+connectDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`\n========================================`);
+        console.log(`  To Do List a funcionar em:`);
+        console.log(`  http://localhost:${PORT}`);
+        console.log(`========================================\n`);
+    });
+}).catch(err => {
+    console.error('Erro ao ligar à base de dados:', err);
+    process.exit(1);
 });

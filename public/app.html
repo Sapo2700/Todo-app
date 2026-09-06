@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To Do List - As Minhas Tarefas</title>
+    <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Cabeçalho -->
+        <div class="app-header">
+            <h1>📝 To Do List</h1>
+            <div class="user-info">
+                <span class="username">Olá, <span id="currentUser"></span></span>
+                <button id="adminBtn" class="btn-admin hidden" onclick="window.location.href='/admin'">⚙️ Admin</button>
+                <button class="btn-logout" onclick="logout()">Sair</button>
+            </div>
+        </div>
+
+        <!-- Estatísticas -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="totalTasks">0</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="pendingTasks">0</div>
+                <div class="stat-label">Pendentes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="completedTasks">0</div>
+                <div class="stat-label">Concluídas</div>
+            </div>
+        </div>
+
+        <!-- Input de nova tarefa -->
+        <div class="task-input-section">
+            <div class="task-input-group">
+                <input type="text" class="task-input" id="taskInput" placeholder="Adicionar nova tarefa..." autofocus>
+                <button class="btn-add" onclick="addTask()">Adicionar</button>
+            </div>
+            <div class="filters">
+                <button class="btn-filter active" onclick="filterTasks('all', this)">Todas</button>
+                <button class="btn-filter" onclick="filterTasks('pending', this)">Pendentes</button>
+                <button class="btn-filter" onclick="filterTasks('completed', this)">Concluídas</button>
+            </div>
+        </div>
+
+        <!-- Lista de tarefas -->
+        <div class="tasks-section">
+            <div class="tasks-header">
+                <span class="tasks-title">As Minhas Tarefas</span>
+                <span class="tasks-count" id="tasksCount">0 tarefas</span>
+            </div>
+            <ul class="task-list" id="taskList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>Nenhuma tarefa ainda. Adiciona a primeira!</p>
+                </div>
+            </ul>
+        </div>
+    </div>
+
+    <script src="app.js?v=4"></script>
+</body>
+</html>

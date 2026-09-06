@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To Do List - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>📝 To Do List</h1>
+                <p>Gerencia as tuas tarefas em qualquer lugar</p>
+            </div>
+
+            <!-- Tabs Login/Registo -->
+            <div class="auth-tabs">
+                <button class="tab-btn active" onclick="showTab('login')">Login</button>
+                <button class="tab-btn" onclick="showTab('register')">Registar</button>
+            </div>
+
+            <!-- Formulário de Login -->
+            <form id="loginForm" class="auth-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="loginUsername">Utilizador</label>
+                    <input type="text" id="loginUsername" placeholder="O teu nome de utilizador" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" placeholder="A tua password" required>
+                </div>
+                <button type="submit" class="btn-primary">Entrar</button>
+            </form>
+
+            <!-- Formulário de Registo -->
+            <form id="registerForm" class="auth-form hidden" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label for="registerUsername">Utilizador</label>
+                    <input type="text" id="registerUsername" placeholder="Escolhe um nome (mín. 3 caracteres)" required minlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" placeholder="Escolhe uma password (mín. 4 caracteres)" required minlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="registerConfirm">Confirmar Password</label>
+                    <input type="password" id="registerConfirm" placeholder="Repete a password" required>
+                </div>
+                <button type="submit" class="btn-primary">Criar Conta</button>
+            </form>
+
+            <!-- Mensagem de Erro/Sucesso -->
+            <div id="message" class="message hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mostrar tab de login ou registo
+        function showTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const tabs = document.querySelectorAll('.tab-btn');
+            const message = document.getElementById('message');
+
+            // Esconder mensagem
+            message.classList.add('hidden');
+
+            // Remover active de todas as tabs
+            tabs.forEach(t => t.classList.remove('active'));
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                tabs[0].classList.add('active');
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                tabs[1].classList.add('active');
+            }
+        }
+
+        // Mostrar mensagem
+        function showMessage(text, type) {
+            const message = document.getElementById('message');
+            message.textContent = text;
+            message.className = 'message ' + type;
+            message.classList.remove('hidden');
+        }
+
+        // Handle Login
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('Login efetuado! A redirecionar...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/app';
+                    }, 1000);
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Erro de conexão com o servidor.', 'error');
+            }
+        }
+
+        // Handle Register
+        async function handleRegister(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirm = document.getElementById('registerConfirm').value;
+
+            // Verificar se as passwords coincidem
+            if (password !== confirm) {
+                showMessage('As passwords não coincidem.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('Conta criada! A redirecionar...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/app';
+                    }, 1000);
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Erro de conexão com o servidor.', 'error');
+            }
+        }
+
+        // Verificar se já está logado
+        async function checkLogin() {
+            try {
+                const response = await fetch('/api/me');
+                const data = await response.json();
+                if (data.logged) {
+                    window.location.href = '/app';
+                }
+            } catch (error) {
+                // Não está logado, ficar na página de login
+            }
+        }
+
+        checkLogin();
+    </script>
+</body>
+</html>

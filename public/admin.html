@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - To Do List</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        .admin-header h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .admin-badge {
+            background: #ff4444;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: #111111;
+            border: 1px solid #1a1a1a;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #00ff88;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: #111111;
+            color: #666;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+
+        .tab-btn.active {
+            background: #00ff88;
+            color: #000;
+            border-color: #00ff88;
+        }
+
+        .section {
+            background: #111111;
+            border: 1px solid #1a1a1a;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .section-count {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .btn-refresh {
+            background: #1a1a1a;
+            color: #00ff88;
+            border: 1px solid #00ff88;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-refresh:hover {
+            background: #00ff88;
+            color: #000;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        th {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        td {
+            font-size: 14px;
+        }
+
+        tr:hover td {
+            background: #0a0a0a;
+        }
+
+        .user-id {
+            color: #00ff88;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .task-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .task-status.pending {
+            background: rgba(255, 170, 0, 0.15);
+            color: #ffaa00;
+        }
+
+        .task-status.completed {
+            background: rgba(0, 255, 136, 0.15);
+            color: #00ff88;
+        }
+
+        .json-viewer {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .json-viewer::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .json-viewer::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .json-viewer::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        .json-key {
+            color: #00ff88;
+        }
+
+        .json-string {
+            color: #ffaa00;
+        }
+
+        .json-number {
+            color: #00aaff;
+        }
+
+        .json-boolean {
+            color: #ff6b6b;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #444;
+            padding: 40px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .search-box {
+            background: #0a0a0a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #fff;
+            font-size: 13px;
+            width: 250px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #00ff88;
+        }
+
+        .search-box::placeholder {
+            color: #444;
+        }
+
+        .password-mask {
+            color: #444;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .section-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Painel Administrativo</h1>
+            <span class="admin-badge">DESENVOLVIMENTO</span>
+        </div>
+
+        <!-- Estatísticas -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="totalUsers">0</div>
+                <div class="stat-label">Utilizadores</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalTasks">0</div>
+                <div class="stat-label">Tarefas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="pendingTasks">0</div>
+                <div class="stat-label">Pendentes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="completedTasks">0</div>
+                <div class="stat-label">Concluídas</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('users')">Utilizadores</button>
+            <button class="tab-btn" onclick="showTab('tasks')">Tarefas</button>
+            <button class="tab-btn" onclick="showTab('json')">JSON Raw</button>
+        </div>
+
+        <!-- Secção Utilizadores -->
+        <div id="usersSection" class="section">
+            <div class="section-header">
+                <div>
+                    <span class="section-title">Utilizadores Registados</span>
+                    <span class="section-count" id="usersCount"></span>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <input type="text" class="search-box" placeholder="Procurar utilizador..." oninput="filterUsers(this.value)">
+                    <button class="btn-refresh" onclick="loadData()">Atualizar</button>
+                </div>
+            </div>
+            <div id="usersTable"></div>
+        </div>
+
+        <!-- Secção Tarefas -->
+        <div id="tasksSection" class="section hidden">
+            <div class="section-header">
+                <div>
+                    <span class="section-title">Todas as Tarefas</span>
+                    <span class="section-count" id="tasksCount"></span>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <input type="text" class="search-box" placeholder="Procurar tarefa..." oninput="filterTasks(this.value)">
+                    <button class="btn-refresh" onclick="loadData()">Atualizar</button>
+                </div>
+            </div>
+            <div id="tasksTable"></div>
+        </div>
+
+        <!-- Secção JSON -->
+        <div id="jsonSection" class="section hidden">
+            <div class="section-header">
+                <span class="section-title">Dados Raw (JSON)</span>
+                <button class="btn-refresh" onclick="loadData()">Atualizar</button>
+            </div>
+            <div style="display: flex; gap: 16px;">
+                <div style="flex: 1;">
+                    <h3 style="font-size: 14px; color: #666; margin-bottom: 12px;">users.db</h3>
+                    <div class="json-viewer" id="usersJson"></div>
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="font-size: 14px; color: #666; margin-bottom: 12px;">tasks.db</h3>
+                    <div class="json-viewer" id="tasksJson"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allUsers = [];
+        let allTasks = [];
+
+        // Carregar dados
+        async function loadData() {
+            try {
+                const [usersRes, tasksRes] = await Promise.all([
+                    fetch('/api/admin/users'),
+                    fetch('/api/admin/tasks')
+                ]);
+
+                const usersData = await usersRes.json();
+                const tasksData = await tasksRes.json();
+
+                if (usersData.success) allUsers = usersData.users;
+                if (tasksData.success) allTasks = tasksData.tasks;
+
+                updateStats();
+                renderUsers(allUsers);
+                renderTasks(allTasks);
+                renderJson();
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+            }
+        }
+
+        // Atualizar estatísticas
+        function updateStats() {
+            document.getElementById('totalUsers').textContent = allUsers.length;
+            document.getElementById('totalTasks').textContent = allTasks.length;
+            document.getElementById('pendingTasks').textContent = allTasks.filter(t => !t.completed).length;
+            document.getElementById('completedTasks').textContent = allTasks.filter(t => t.completed).length;
+        }
+
+        // Renderizar utilizadores
+        function renderUsers(users) {
+            const container = document.getElementById('usersTable');
+            document.getElementById('usersCount').textContent = `(${users.length} registados)`;
+
+            if (users.length === 0) {
+                container.innerHTML = '<div class="empty-state">Nenhum utilizador registado ainda.</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Utilizador</th>
+                            <th>Password (Hash)</th>
+                            <th>Data de Registo</th>
+                            <th>Tarefas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => {
+                            const userTasks = allTasks.filter(t => t.userId === user._id);
+                            return `
+                                <tr>
+                                    <td><span class="user-id">${user._id}</span></td>
+                                    <td><strong>${user.username}</strong></td>
+                                    <td><span class="password-mask">${user.password.substring(0, 20)}...</span></td>
+                                    <td>${user.createdAt ? new Date(user.createdAt).toLocaleString('pt-BR') : 'N/A'}</td>
+                                    <td>${userTasks.length} tarefa(s)</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Renderizar tarefas
+        function renderTasks(tasks) {
+            const container = document.getElementById('tasksTable');
+            document.getElementById('tasksCount').textContent = `(${tasks.length} total)`;
+
+            if (tasks.length === 0) {
+                container.innerHTML = '<div class="empty-state">Nenhuma tarefa criada ainda.</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Utilizador</th>
+                            <th>Tarefa</th>
+                            <th>Estado</th>
+                            <th>Data de Criação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tasks.map(task => {
+                            const user = allUsers.find(u => u._id === task.userId);
+                            return `
+                                <tr>
+                                    <td><span class="user-id">${task._id}</span></td>
+                                    <td>${user ? user.username : 'Desconhecido'}</td>
+                                    <td>${task.text}</td>
+                                    <td><span class="task-status ${task.completed ? 'completed' : 'pending'}">${task.completed ? 'Concluída' : 'Pendente'}</span></td>
+                                    <td>${task.createdAt ? new Date(task.createdAt).toLocaleString('pt-BR') : 'N/A'}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Renderizar JSON
+        function renderJson() {
+            document.getElementById('usersJson').innerHTML = syntaxHighlight(JSON.stringify(allUsers, null, 2));
+            document.getElementById('tasksJson').innerHTML = syntaxHighlight(JSON.stringify(allTasks, null, 2));
+        }
+
+        // Destacar sintaxe JSON
+        function syntaxHighlight(json) {
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        // Filtrar utilizadores
+        function filterUsers(query) {
+            const filtered = allUsers.filter(u => 
+                u.username.toLowerCase().includes(query.toLowerCase())
+            );
+            renderUsers(filtered);
+        }
+
+        // Filtrar tarefas
+        function filterTasks(query) {
+            const filtered = allTasks.filter(t => 
+                t.text.toLowerCase().includes(query.toLowerCase())
+            );
+            renderTasks(filtered);
+        }
+
+        // Mostrar tab
+        function showTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('usersSection').classList.add('hidden');
+            document.getElementById('tasksSection').classList.add('hidden');
+            document.getElementById('jsonSection').classList.add('hidden');
+
+            if (tab === 'users') {
+                document.getElementById('usersSection').classList.remove('hidden');
+            } else if (tab === 'tasks') {
+                document.getElementById('tasksSection').classList.remove('hidden');
+            } else {
+                document.getElementById('jsonSection').classList.remove('hidden');
+            }
+        }
+
+        // Carregar ao abrir
+        loadData();
+
+        // Atualizar a cada 5 segundos
+        setInterval(loadData, 5000);
+    </script>
+</body>
+</html>

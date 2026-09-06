@@ -1,0 +1,16 @@
+{
+  "name": "todo-app",
+  "version": "1.0.0",
+  "description": "To Do List multi-utilizador",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "nedb-promises": "^6.2.3",
+    "bcrypt": "^5.1.1",
+    "express-session": "^1.17.3"
+  }
+}

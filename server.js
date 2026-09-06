@@ -39,7 +39,10 @@ async function connectDB() {
         process.exit(1);
     }
 
-    const client = new MongoClient(MONGO_URI);
+    const client = new MongoClient(MONGO_URI, {
+        tls: true,
+        tlsAllowInvalidCertificates: false
+    });
     await client.connect();
     db = client.db('todoapp');
     users = db.collection('users');

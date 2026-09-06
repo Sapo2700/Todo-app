@@ -97,8 +97,12 @@ app.post('/api/register', async (req, res) => {
         // Encriptar password
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Primeiro utilizador é automaticamente admin
+        const userCount = await users.count({});
+        const isAdmin = userCount === 0;
+
         // Criar utilizador
-        const newUser = await users.insert({ username, password: hashedPassword, admin: false });
+        const newUser = await users.insert({ username, password: hashedPassword, admin: isAdmin });
 
         // Criar sessão
         req.session.userId = newUser._id;

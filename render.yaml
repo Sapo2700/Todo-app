@@ -1,14 +1,10 @@
 services:
   - type: web
     name: mytodolist
-    env: node
+    env: docker
     region: frankfurt
     plan: free
-    buildCommand: npm install
-    startCommand: node server.js
     envVars:
-      - key: NODE_VERSION
-        value: "18"
       - key: MONGO_URI
         sync: false
       - key: SESSION_SECRET

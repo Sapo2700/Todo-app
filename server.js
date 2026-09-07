@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
@@ -16,7 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-    secret: 'minha-chave-secreta-todolist',
+    secret: process.env.SESSION_SECRET || 'minha-chave-secreta-todolist',
     resave: false,
     saveUninitialized: false,
     cookie: { 

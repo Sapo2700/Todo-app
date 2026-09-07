@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "description": "To Do List multi-utilizador",
   "main": "server.js",
-  "engines": {
-    "node": "18.x"
-  },
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
@@ -15,6 +12,7 @@
     "mongodb": "^5.9.0",
     "bcrypt": "^5.1.1",
     "express-session": "^1.17.3",
+    "connect-mongo": "^5.1.0",
     "dotenv": "^16.3.1"
   }
 }

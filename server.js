@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const bcrypt = require('bcrypt');
 const { MongoClient, ObjectId } = require('mongodb');
 const path = require('path');
@@ -20,6 +21,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'minha-chave-secreta-todolist',
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: MONGO_URI, dbName: 'todoapp' }),
     cookie: { 
         secure: false,
         maxAge: 24 * 60 * 60 * 1000
@@ -40,10 +42,7 @@ async function connectDB() {
         process.exit(1);
     }
 
-    const client = new MongoClient(MONGO_URI, {
-        ssl: true,
-        tlsAllowInvalidCertificates: true
-    });
+    const client = new MongoClient(MONGO_URI);
     await client.connect();
     db = client.db('todoapp');
     users = db.collection('users');

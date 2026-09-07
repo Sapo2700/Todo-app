@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: mytodolist
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: "18"

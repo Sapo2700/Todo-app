@@ -1,4 +1,10 @@
 {
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -7,14 +13,6 @@
     {
       "source": "/make-me-admin/:secret",
       "destination": "/api/index.js"
-    },
-    {
-      "source": "/app",
-      "destination": "/app.html"
-    },
-    {
-      "source": "/admin",
-      "destination": "/admin.html"
     }
   ]
 }
